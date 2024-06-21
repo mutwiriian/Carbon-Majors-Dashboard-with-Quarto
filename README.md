@@ -1,6 +1,7 @@
 As part of its efforts to ensure accouintability of industrial corporations that emit
 CO<sub>2</sub>, [The Carbon Majors](https://carbonmajors.org/) research group started 
-compiling emissions data since 2013.
+compiling their production data since 2013. The data spans back to 1854 but here I have
+used data from 1900
 
 The data can be used to quantify the degree of the environmental destruction caused by these entities.
 In this project I use the data as uploaded in the [#TidyTuesday](https://x.com/hashtag/TidyTuesday?src=hashtag_click) challenge to create 
