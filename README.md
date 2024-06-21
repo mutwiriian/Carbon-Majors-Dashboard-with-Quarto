@@ -5,7 +5,7 @@ used data from 1900
 
 The data can be used to quantify the degree of the environmental destruction caused by these entities.
 In this project I use the data as uploaded in the [#TidyTuesday](https://x.com/hashtag/TidyTuesday?src=hashtag_click) challenge to create 
-a Quarto dashboard that tracks the levels and associated changes in the production of these entities that
+a Quarto dashboard that tracks the levels of production over time, breaks it down by entity and highlight the leading producers
 
 To run the project in your browser follow along these steps
 # Install the Quarto CLI.
@@ -32,6 +32,8 @@ Open the terminal and run the following code to view the live dashboard in the b
 ```
 quarto preview d:/DS/Python/quarto_dashboard/emissions.qmd --no-browser --no-watch-inputs
 ```
+# Sample
+![sample image](./emissions.png)
 
 
 
