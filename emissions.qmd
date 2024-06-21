@@ -1,0 +1,272 @@
+---
+title: Carbon Majors Emissions
+author: Ian Mutwiri
+format: 
+    dashboard:
+        logo: /carbon_majors.svg
+        nav-buttons: #[linkedin, twitter, github]
+            - icon: github
+              href: https://github.com/mutwiriian
+            
+            - icon: linkedin
+              href: https://www.linkedin.com/in/ian-mutwiri-a21456148/
+
+            - icon: twitter
+              href: https://x.com/mutwiriian
+        theme: united
+---
+```{python}
+#| echo: false
+import pandas as pd
+import numpy as np
+
+import matplotlib.pyplot as plt
+
+import seaborn as sns
+from seaborn import axes_style
+import seaborn.objects as so
+
+
+sns.set_theme('notebook','whitegrid')
+sns.set_palette('Oranges_d')
+```
+```{python}
+#| echo: false
+emissions = pd.read_csv(
+    'https://raw.githubusercontent.com/rfordatascience/tidytuesday/'
+    'master/data/2024/2024-05-21/emissions.csv'
+    )
+
+emissions['commodity'] = (
+    np.where(emissions['commodity'].str.contains('Coal'),'Coal',emissions['commodity'])
+    )
+
+emissions = emissions[emissions['year'] > 1900]
+```
+# Overview
+##
+::: {.card}
+The Carbon Majors database hosts data on emissions from 1854 by major producers of oil, gas, coal and cement. 
+The data helps to track these production-linked emissions to the respective entities. 
+It is self-reported by entities and can be used to hold corporations to account and in informing policy and strategies to minimize fossil fuel usage. 
+More information on the project can be accessed from [The Carbon Majors](https://carbonmajors.org/briefing/The-Carbon-Majors-Database-26913). 
+Here is a random sample of the data
+
+
+```{python}
+#| padding: 0px
+#| height: "70%"
+from IPython.display import Markdown
+Markdown(emissions.sample(10).to_markdown(index=False))
+```
+
+:::
+# Emissions
+##
+```{python}
+#| title: Emissions, MtCO2
+#| padding: 0px
+emission_by_year = (
+    emissions
+    .groupby(['year','commodity'])['total_emissions_MtCO2e']
+    .sum().reset_index()
+)
+g = sns.FacetGrid(emission_by_year,col='commodity',
+sharex=True,sharey=False,col_wrap=2,height=3.5,aspect=1.2)
+g.map_dataframe(sns.lineplot,x='year',y='total_emissions_MtCO2e',linewidth=2)
+g.set_ylabels('')
+g.set_xlabels('')
+g.set_titles('{col_name}')
+```
+
+```{python}
+#| include: false
+commodities = emission_by_year['commodity'].unique()
+units = emissions['production_unit'].unique()
+commodities_units = dict(zip(commodities,units))
+```
+
+```{python}
+#| title: Production
+#| padding: 0px
+production_by_year = (
+    emissions.groupby(['year','commodity'])['production_value'].sum().reset_index()
+    )
+    
+g = sns.FacetGrid(production_by_year,col='commodity',col_wrap=2,sharex=True,sharey=False,height=3.5,aspect=1.2)
+g.map_dataframe(sns.lineplot,x='year',y='production_value',linewidth=2)
+g.set_titles('{col_name}')
+g.set_xlabels('')
+
+g.axes[0].set_ylabel(units[0]);
+g.axes[1].set_ylabel(units[1]);
+g.axes[2].set_ylabel(units[2]);
+g.axes[3].set_ylabel(units[3]);
+```
+
+# Top {orientation="columns"}
+### 
+
+```{python}
+#| title: Top in overall emitters of CO2
+#| padding: 0px
+so.Plot.config.theme.update(axes_style('whitegrid'))
+
+gas_emission_by_entity = (
+    emissions[['parent_entity','commodity','total_emissions_MtCO2e']]
+    .groupby('parent_entity')
+    .sum('total_emissions_MtCO2e')
+    .round(2)
+    .sort_values('total_emissions_MtCO2e',ascending=False).reset_index()
+    .rename(columns={'total_emissions_MtCO2e':'total_emissions_MtCO2e_gas'})
+)
+
+(
+    so.Plot(gas_emission_by_entity.head(10))
+    .add(so.Bar(color='#E95420'),y='parent_entity',x='total_emissions_MtCO2e_gas')
+    .label(x='MtCO2',y='')
+)
+```
+
+### 
+```{python}
+#| title: Top emitters from Natural Gas
+#| padding: 0px
+gas_emission_by_entity = (
+    emissions[['parent_entity','commodity','production_value']]
+    .query('commodity == "Natural Gas"')
+    .groupby('parent_entity')
+    .sum('production_value')
+    .round(2)
+    .sort_values('production_value',ascending=False).reset_index()
+)
+gas_emission_by_entity['production_value'] = gas_emission_by_entity['production_value'] / 1000
+
+
+(
+    so.Plot(gas_emission_by_entity.head(5))
+    .add(so.Bar(color='#E95420'),y='parent_entity',x='production_value')
+    .label(x='Production (thousand Bcf/yr)',y='')
+    .limit(x=(0,800))
+    .theme({
+        'ytick.labelsize': 20,
+        'xtick.labelsize': 15,
+        'axes.labelsize':20
+    })
+)
+
+
+```
+
+```{python}
+#| title: Top emitters from Oil and NGL
+#| padding: 0px
+oil_ngl_emission_by_parent = (
+        emissions[['parent_entity','commodity','production_value']]
+        .query('commodity == "Oil & NGL"')
+        .groupby('parent_entity')
+        .sum('production_value')
+        .round(2)
+        .sort_values('production_value',ascending=False)
+        .reset_index()
+        # .rename(columns={'total_emissions_MtCO2e':'total_emissions_MtCO2e_oil_ngl'})
+    )
+
+oil_ngl_emission_by_parent['production_value'] = oil_ngl_emission_by_parent['production_value'] / 1000
+
+(
+    so.Plot(oil_ngl_emission_by_parent.head(5))
+    .add(so.Bar(color='#E95420'),y='parent_entity',x='production_value')
+    .label(x='Billion bbl/yr',y='')
+    .limit(x=(0,200))
+    .theme({
+        'ytick.labelsize': 20,
+        'xtick.labelsize': 15,
+        'axes.labelsize': 20
+    })
+)
+```
+# Entity Type
+## 
+```{python}
+#| title: Emissions by Entity
+#| padding: 0px
+total_emissions_by_parent_series = (
+    emissions[['year','parent_type','total_emissions_MtCO2e']]
+    .groupby(['year','parent_type'])
+    .sum()
+    .reset_index()
+)
+
+g = sns.FacetGrid(total_emissions_by_parent_series,sharey=False,
+col='parent_type',col_wrap=2,height=4,aspect=1.2)
+g.map_dataframe(sns.lineplot,x='year',y='total_emissions_MtCO2e',linewidth=2)
+g.set_ylabels('MtC02e')
+g.set_titles('{col_name}')
+```
+
+### {.tabset}
+```{python}
+#| title: Investor-owned
+#| padding: 0px
+total_production_by_parent = (
+    emissions[emissions['parent_type'] == 'Investor-owned Company'][['year','commodity','production_value']]
+    .groupby(['year','commodity'])
+    .sum('production_value').reset_index()
+ )
+
+g = sns.FacetGrid(total_production_by_parent,
+sharey=False,col='commodity',col_wrap=2,height=4,aspect=1.2)
+g.map_dataframe(sns.lineplot,x='year',y='production_value',linewidth=2)
+#g.set_ylabels('')
+g.set_titles('{col_name}')
+g.set_axis_labels(x_var='')
+
+g.axes[0].set_ylabel(units[0]);
+g.axes[1].set_ylabel(units[1]);
+g.axes[2].set_ylabel(units[2]);
+g.axes[3].set_ylabel(units[3]);
+```
+
+```{python}
+#| title: Nation State
+total_production_by_parent = (
+    emissions[emissions['parent_type'] == 'Nation State'][['year','commodity','production_value']]
+    .groupby(['year','commodity'])
+    .sum('production_value')
+    .reset_index()
+)
+
+g = sns.FacetGrid(total_production_by_parent,
+sharey=False,col='commodity',col_wrap=2,height=4,aspect=1.2)
+g.map_dataframe(sns.lineplot,x='year',y='production_value',linewidth=2)
+#g.set_ylabels('')
+g.set_titles('{col_name}')
+g.set_axis_labels(x_var='')
+
+g.axes[0].set_ylabel(units[0]);
+g.axes[1].set_ylabel(units[1]);
+g.axes[2].set_ylabel(units[2]);
+g.axes[3].set_ylabel(units[3]);
+```
+
+```{python}
+#| title: State-owned
+total_production_by_parent = (
+    emissions[emissions['parent_type'] == 'State-owned Entity'][['year','commodity','production_value']]
+    .groupby(['year','commodity'])
+    .sum('production_value').reset_index()
+ )
+
+g = sns.FacetGrid(total_production_by_parent,
+sharey=False,col='commodity',col_wrap=2,height=4,aspect=1.2)
+g.map_dataframe(sns.lineplot,x='year',y='production_value',linewidth=2)
+#g.set_ylabels('')
+g.set_titles('{col_name}')
+g.set_axis_labels(x_var='')
+
+
+g.axes[0].set_ylabel(units[0]);
+g.axes[1].set_ylabel(units[1]);
+g.axes[2].set_ylabel(units[2]);
+```
